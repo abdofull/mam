@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تطبيق جيب - قائمة تسوق العيلة</title>
+
+    <!-- خط تجوال -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: {
+                            50: '#fdfbf7',
+                            100: '#f7f3e8',
+                            200: '#efe6d0',
+                        },
+                        sage: {
+                            500: '#7c9473',
+                            600: '#657a5e',
+                            700: '#4e6149',
+                        },
+                        peach: {
+                            400: '#ff9e7d',
+                            500: '#ff8b64',
+                            600: '#e56c45',
+                        },
+                        dark: {
+                            800: '#374151',
+                            900: '#1f2937',
+                        }
+                    },
+                    fontFamily: {
+                        'tajawal': ['Tajawal', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(124, 148, 115, 0.15)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.5)',
+                    },
+                    borderRadius: {
+                        '3xl': '1.5rem',
+                        '4xl': '2.5rem',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.95)' },
+                            '50%': { transform: 'scale(1.1)' },
+                            '100%': { transform: 'scale(1)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+
+    <style>
+        * {
+            font-family: 'Tajawal', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fdfbf7;
+            color: #374151;
+            /* pattern overlay opacity 0.4 */
+            background-image: radial-gradient(#7c9473 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
+        }
+
+        /* Hide Scrollbar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Custom SweetAlert Styles */
+        div:where(.swal2-container) div:where(.swal2-popup) {
+            border-radius: 2rem !important;
+            font-family: 'Tajawal', sans-serif !important;
+            background: #fdfbf7 !important;
+        }
+
+        div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
+            background-color: #ff8b64 !important;
+            border-radius: 1rem !important;
+            font-weight: bold !important;
+        }
+
+        .category-tab {
+            transition: all 0.3s ease;
+        }
+
+        .category-tab.active {
+            background-color: #7c9473;
+            color: white;
+            box-shadow: 0 8px 20px -6px rgba(124, 148, 115, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .item-card {
+            background: white;
+            transition: all 0.2s ease;
+            border: 1px solid #f3f4f6;
+        }
+
+        .item-card.selected {
+            border: 2px solid #7c9473;
+            background: #f7f9f6;
+        }
+
+        .floating-action {
+            box-shadow: 0 10px 30px -5px rgba(255, 139, 100, 0.4);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen pb-40">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-sage-500/10 shadow-sm rounded-b-4xl">
+        <div class="max-w-lg mx-auto p-5 pb-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-sage-500/10 rounded-full flex items-center justify-center text-sage-600">
+                        <i data-lucide="chef-hat" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-black text-sage-600">تطبيق جيب</h1>
+                        <p class="text-xs font-medium text-gray-400">قائمة العيلة • <span id="current-date"></span></p>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="toggleView()"
+                        class="bg-cream-100 p-2.5 rounded-2xl hover:bg-cream-200 transition-colors text-sage-700">
+                        <i id="view-icon" data-lucide="users" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Card -->
+            <div id="summary-card"
+                class="mt-4 bg-sage-500 text-white p-4 rounded-3xl shadow-soft flex justify-between items-center transform transition-all">
+                <div class="flex items-baseline gap-1">
+                    <span id="header-count" class="text-3xl font-black">0</span>
+                    <span class="text-sage-100 text-sm">غرض في السلة</span>
+                </div>
+                <div class="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                    <i data-lucide="shopping-basket" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-lg mx-auto p-4">
+
+        <!-- SHOPPING LIST VIEW -->
+        <div id="view-shopping" class="animate-fade-in">
+            <!-- Search -->
+            <div class="relative mb-6 group">
+                <input type="text" id="search-input" placeholder="شنو ناقص المطبخ اليوم؟"
+                    class="w-full bg-white border-2 border-transparent focus:border-peach-400 rounded-3xl py-4 pr-12 pl-4 shadow-sm outline-none transition-all placeholder:text-gray-300 font-bold text-gray-600">
+                <i data-lucide="search"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5 group-focus-within:text-peach-400 transition-colors"></i>
+            </div>
+
+            <!-- Categories -->
+            <div class="sticky top-[140px] z-40 bg-[#fdfbf7]/95 backdrop-blur-sm py-2 -mx-4 px-4 mb-4 overflow-hidden">
+                <div id="categories-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                    <!-- Javascript will populate this -->
+                </div>
+            </div>
+
+            <!-- Items Grid -->
+            <div id="items-grid" class="grid grid-cols-2 gap-3 pb-20">
+                <!-- Javascript will populate this -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden text-center py-10 opacity-60">
+                <i data-lucide="carrot" class="w-16 h-16 mx-auto text-gray-300 mb-2"></i>
+                <p>ما لقيتش الغرض هذا يا أمي</p>
+            </div>
+        </div>
+
+        <!-- FAMILY DIRECTORY VIEW -->
+        <div id="view-family" class="hidden animate-fade-in pb-20">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-sage-600 mb-2">دليل الأبناء</h2>
+                <p class="text-gray-400 text-sm">سجلي أرقامهم باش تبعثي القائمة بسرعة</p>
+            </div>
+
+            <div id="family-list" class="space-y-3 mb-8">
+                <!-- Family members here -->
+            </div>
+
+            <button onclick="addFamilyMember()"
+                class="w-full py-4 border-2 border-dashed border-sage-500/30 rounded-3xl text-sage-600 font-bold hover:bg-sage-50 transition-colors flex items-center justify-center gap-2">
+                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                إضافة ابن جديد
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Bottom Actions Bar -->
+    <div id="action-bar"
+        class="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40 flex gap-3 transition-transform duration-300 translate-y-32">
+        <button onclick="copyList()"
+            class="bg-white text-sage-600 w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+            <i data-lucide="copy" class="w-6 h-6"></i>
+        </button>
+
+        <button onclick="handleSend()"
+            class="flex-1 bg-peach-500 text-white rounded-[2rem] shadow-soft shadow-peach-500/40 h-14 flex items-center justify-center gap-2 font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all">
+            <span>إرسال القائمة</span>
+            <i data-lucide="send" class="w-5 h-5 rtl:rotate-180"></i>
+        </button>
+
+        <button onclick="confirmClear()"
+            class="bg-white text-red-400 w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-red-50 transition-colors">
+            <i data-lucide="trash-2" class="w-6 h-6"></i>
+        </button>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const DATA = [
+            {
+                id: 'cat1', title: 'أساسيات', icon: 'flame', emoji: '🔥',
+                items: [
+                    { id: 1, name: 'خبز', icon: '🥖', unit: 'ربطة' },
+                    { id: 2, name: 'بيض', icon: '🥚', unit: 'طبق' },
+                    { id: 3, name: 'زيت طبخ', icon: '🌻', unit: 'علبة' },
+                    { id: 4, name: 'سكر', icon: '🍬', unit: 'كيلو' },
+                    { id: 5, name: 'أرز', icon: '🍚', unit: 'كيس' },
+                    { id: 6, name: 'ملح', icon: '🧂', unit: 'كيس' },
+                    { id: 7, name: 'طحين', icon: '🌾', unit: 'كيس' },
+                    { id: 8, name: 'مكرونة', icon: '🍝', unit: 'كيس' },
+                    { id: 9, name: 'شاي', icon: '🍵', unit: 'علبة' },
+                    { id: 10, name: 'شعيرية', icon: '🍜', unit: 'كيس' },
+                    { id: 11, name: 'كسكسي', icon: '🥘', unit: 'كيس' },
+                    { id: 12, name: 'عدس', icon: '🫘', unit: 'كيس' },
+                ]
+            },
+            {
+                id: 'cat2', title: 'خضار', icon: 'leaf', emoji: '🥬',
+                items: [
+                    { id: 20, name: 'طماطم', icon: '🍅', unit: 'كيلو' },
+                    { id: 21, name: 'خيار', icon: '🥒', unit: 'كيلو' },
+                    { id: 22, name: 'بصل', icon: '🧅', unit: 'كيلو' },
+                    { id: 23, name: 'بطاطا', icon: '🥔', unit: 'كيلو' },
+                    { id: 24, name: 'ثوم', icon: '🧄', unit: 'رأس' },
+                    { id: 25, name: 'فلفل أخضر', icon: '🫑', unit: 'كيلو' },
+                    { id: 26, name: 'ليمون', icon: '🍋', unit: 'كيلو' },
+                    { id: 27, name: 'باذنجان', icon: '🍆', unit: 'كيلو' },
+                    { id: 28, name: 'كوسا', icon: '🥒', unit: 'كيلو' },
+                    { id: 29, name: 'جزر', icon: '🥕', unit: 'كيلو' },
+                    { id: 30, name: 'خس', icon: '🥬', unit: 'حبة' },
+                    { id: 31, name: 'بقدونس', icon: '🌿', unit: 'ربطة' },
+                    { id: 32, name: 'كزبرة', icon: '🌿', unit: 'ربطة' },
+                    { id: 33, name: 'نعناع', icon: '🌱', unit: 'ربطة' },
+                    { id: 34, name: 'فجل', icon: '🥕', unit: 'ربطة' },
+                    { id: 35, name: 'ملفوف', icon: '🥬', unit: 'حبة' },
+                ]
+            },
+            {
+                id: 'cat3', title: 'لحوم', icon: 'beef', emoji: '🥩',
+                items: [
+                    { id: 40, name: 'دجاج كامل', icon: '🍗', unit: 'حبة' },
+                    { id: 41, name: 'صدور دجاج', icon: '🍗', unit: 'كيلو' },
+                    { id: 42, name: 'أفخاذ دجاج', icon: '🍗', unit: 'كيلو' },
+                    { id: 43, name: 'لحم غنم', icon: '🍖', unit: 'كيلو' },
+                    { id: 44, name: 'لحم بقر', icon: '🥩', unit: 'كيلو' },
+                    { id: 45, name: 'لحم مفروم', icon: '🍔', unit: 'كيلو' },
+                    { id: 46, name: 'كبدة', icon: '🫀', unit: 'كيلو' },
+                    { id: 47, name: 'سمك', icon: '🐟', unit: 'كيلو' },
+                    { id: 48, name: 'جمبري', icon: '🦐', unit: 'كيلو' },
+                    { id: 49, name: 'سجق', icon: '🌭', unit: 'كيلو' },
+                    { id: 50, name: 'نقانق', icon: '🌭', unit: 'باكو' },
+                ]
+            },
+            {
+                id: 'cat4', title: 'ألبان', icon: 'milk', emoji: '🥛',
+                items: [
+                    { id: 60, name: 'حليب طازج', icon: '🥛', unit: 'لتر' },
+                    { id: 61, name: 'حليب بودرة', icon: '🥛', unit: 'علبة' },
+                    { id: 62, name: 'زبادي', icon: '🥣', unit: 'علبة' },
+                    { id: 63, name: 'لبنة', icon: '🥣', unit: 'علبة' },
+                    { id: 64, name: 'جبنة بيضاء', icon: '🧀', unit: 'علبة' },
+                    { id: 65, name: 'زبدة', icon: '🧈', unit: 'حبة' },
+                    { id: 66, name: 'قشطة', icon: '🍯', unit: 'علبة' },
+                    { id: 67, name: 'حليب مكثف', icon: '🥫', unit: 'علبة' },
+                    { id: 68, name: 'روب', icon: '🥛', unit: 'علبة' },
+                ]
+            },
+            {
+                id: 'cat5', title: 'فواكه', icon: 'cherry', emoji: '🍎',
+                items: [
+                    { id: 70, name: 'تفاح', icon: '🍎', unit: 'كيلو' },
+                    { id: 71, name: 'موز', icon: '🍌', unit: 'كيلو' },
+                    { id: 72, name: 'برتقال', icon: '🍊', unit: 'كيلو' },
+                    { id: 73, name: 'عنب', icon: '🍇', unit: 'كيلو' },
+                    { id: 74, name: 'مانجو', icon: '🥭', unit: 'كيلو' },
+                    { id: 75, name: 'فراولة', icon: '🍓', unit: 'طبق' },
+                    { id: 76, name: 'بطيخ', icon: '🍉', unit: 'حبة' },
+                    { id: 77, name: 'شمام', icon: '🍈', unit: 'حبة' },
+                    { id: 78, name: 'رمان', icon: '🫐', unit: 'كيلو' },
+                    { id: 79, name: 'تمر', icon: '🌴', unit: 'كيلو' },
+                    { id: 80, name: 'تين', icon: '🫐', unit: 'كيلو' },
+                ]
+            },
+            {
+                id: 'cat6', title: 'معلبات', icon: 'package', emoji: '🥫',
+                items: [
+                    { id: 90, name: 'طماطم حكك', icon: '🥫', unit: 'علبة' },
+                    { id: 91, name: 'صلصة طماطم', icon: '🥫', unit: 'علبة' },
+                    { id: 92, name: 'تن (تونة)', icon: '🐟', unit: 'علبة' },
+                    { id: 93, name: 'هريسة ليبية', icon: '🌶️', unit: 'علبة' },
+                    { id: 94, name: 'فاصوليا معلبة', icon: '🫘', unit: 'علبة' },
+                    { id: 95, name: 'بازلاء معلبة', icon: '🫛', unit: 'علبة' },
+                    { id: 96, name: 'ذرة معلبة', icon: '🌽', unit: 'علبة' },
+                    { id: 97, name: 'زيتون', icon: '🫒', unit: 'علبة' },
+                    { id: 98, name: 'مخلل', icon: '🥒', unit: 'برطمان' },
+                    { id: 99, name: 'فول مدمس', icon: '🫘', unit: 'علبة' },
+                    { id: 100, name: 'حمص معلب', icon: '🫘', unit: 'علبة' },
+                    { id: 101, name: 'سردين', icon: '🐟', unit: 'علبة' },
+                ]
+            },
+            {
+                id: 'cat7', title: 'قهوة ومنبهات', icon: 'coffee', emoji: '☕',
+                items: [
+                    { id: 110, name: 'نسكافيه', icon: '☕', unit: 'علبة' },
+                    { id: 111, name: 'بن وطني', icon: '☕', unit: 'كيس' },
+                    { id: 112, name: 'بن تركي', icon: '☕', unit: 'كيس' },
+                    { id: 113, name: 'زهر (شاي أخضر)', icon: '🍵', unit: 'علبة' },
+                    { id: 114, name: 'كاكاو', icon: '🍫', unit: 'علبة' },
+                    { id: 115, name: 'شاي ليبتون', icon: '🍵', unit: 'علبة' },
+                    { id: 116, name: 'شاي أحمر', icon: '🍵', unit: 'علبة' },
+                    { id: 117, name: 'نعناع مجفف', icon: '🌿', unit: 'كيس' },
+                    { id: 118, name: 'كريمر', icon: '🥛', unit: 'علبة' },
+                    { id: 119, name: 'سكر بني', icon: '🍬', unit: 'كيس' },
+                ]
+            },
+            {
+                id: 'cat8', title: 'مخبوزات', icon: 'croissant', emoji: '🥐',
+                items: [
+                    { id: 130, name: 'خبز شعير', icon: '🍞', unit: 'ربطة' },
+                    { id: 131, name: 'خبز تنور', icon: '🫓', unit: 'حبة' },
+                    { id: 132, name: 'بريوش', icon: '🥐', unit: 'حبة' },
+                    { id: 133, name: 'كعك مالح', icon: '🥨', unit: 'كيس' },
+                    { id: 134, name: 'صمون', icon: '🥖', unit: 'حبة' },
+                    { id: 135, name: 'توست', icon: '🍞', unit: 'باكو' },
+                    { id: 136, name: 'كعك حلو', icon: '🍩', unit: 'كيس' },
+                    { id: 137, name: 'فطيرة', icon: '🥧', unit: 'حبة' },
+                    { id: 138, name: 'خبز برجر', icon: '🍔', unit: 'باكو' },
+                    { id: 139, name: 'خبز صاج', icon: '🫓', unit: 'باكو' },
+                ]
+            },
+            {
+                id: 'cat9', title: 'حلويات ومشروبات', icon: 'candy', emoji: '🍫',
+                items: [
+                    { id: 150, name: 'شوكولاتة', icon: '🍫', unit: 'حبة' },
+                    { id: 151, name: 'بسكويت ماكاو', icon: '🍪', unit: 'باكو' },
+                    { id: 152, name: 'بسكويت أوريو', icon: '🍪', unit: 'باكو' },
+                    { id: 153, name: 'عصير راني', icon: '🧃', unit: 'علبة' },
+                    { id: 154, name: 'عصير سانتوب', icon: '🧃', unit: 'باكو' },
+                    { id: 155, name: 'مشروب غازي', icon: '🥤', unit: 'علبة' },
+                    { id: 156, name: 'كيك جاهز', icon: '🍰', unit: 'علبة' },
+                    { id: 157, name: 'رقائق شيبس', icon: '🥔', unit: 'باكو' },
+                    { id: 158, name: 'مكسرات', icon: '🥜', unit: 'كيس' },
+                    { id: 159, name: 'حلاوة طحينية', icon: '🍯', unit: 'علبة' },
+                    { id: 160, name: 'مربى', icon: '🍓', unit: 'برطمان' },
+                    { id: 161, name: 'عسل', icon: '🍯', unit: 'برطمان' },
+                    { id: 162, name: 'نوتيلا', icon: '🍫', unit: 'برطمان' },
+                ]
+            },
+            {
+                id: 'cat10', title: 'أجبان راقية', icon: 'slice', emoji: '🧀',
+                items: [
+                    { id: 170, name: 'جبنة فيتا', icon: '🧀', unit: 'علبة' },
+                    { id: 171, name: 'جبنة موزاريلا', icon: '🧀', unit: 'كيس' },
+                    { id: 172, name: 'جبنة مثلثات', icon: '🧀', unit: 'علبة' },
+                    { id: 173, name: 'جبنة إيدام', icon: '🧀', unit: 'حبة' },
+                    { id: 174, name: 'جبنة شيدر', icon: '🧀', unit: 'باكو' },
+                    { id: 175, name: 'جبنة كريمي', icon: '🧀', unit: 'علبة' },
+                    { id: 176, name: 'جبنة حلوم', icon: '🧀', unit: 'باكو' },
+                    { id: 177, name: 'جبنة قريش', icon: '🧀', unit: 'علبة' },
+                    { id: 178, name: 'جبنة عكاوي', icon: '🧀', unit: 'كيلو' },
+                ]
+            },
+            {
+                id: 'cat11', title: 'بهارات وعطارة', icon: 'flame', emoji: '🌶️',
+                items: [
+                    { id: 190, name: 'بزار (بهارات مشكلة)', icon: '🫙', unit: 'كيس' },
+                    { id: 191, name: 'حرارات ليبية', icon: '🌶️', unit: 'كيس' },
+                    { id: 192, name: 'فلفل أحمر مطحون', icon: '🌶️', unit: 'كيس' },
+                    { id: 193, name: 'ملح صخري', icon: '🧂', unit: 'كيس' },
+                    { id: 194, name: 'كمون', icon: '🫙', unit: 'كيس' },
+                    { id: 195, name: 'كركم', icon: '🫙', unit: 'كيس' },
+                    { id: 196, name: 'قرفة', icon: '🫙', unit: 'كيس' },
+                    { id: 197, name: 'زنجبيل', icon: '🫙', unit: 'كيس' },
+                    { id: 198, name: 'فلفل أسود', icon: '🫙', unit: 'كيس' },
+                    { id: 199, name: 'ورق غار', icon: '🌿', unit: 'كيس' },
+                    { id: 200, name: 'حبهان', icon: '🫙', unit: 'كيس' },
+                    { id: 201, name: 'زعتر', icon: '🌿', unit: 'كيس' },
+                    { id: 202, name: 'سماق', icon: '🫙', unit: 'كيس' },
+                ]
+            },
+            {
+                id: 'cat12', title: 'عناية شخصية', icon: 'sparkles', emoji: '✨',
+                items: [
+                    { id: 220, name: 'شامبو', icon: '🧴', unit: 'علبة' },
+                    { id: 221, name: 'بلسم شعر', icon: '🧴', unit: 'علبة' },
+                    { id: 222, name: 'صابون قطع', icon: '🧼', unit: 'حبة' },
+                    { id: 223, name: 'صابون سائل', icon: '🧴', unit: 'علبة' },
+                    { id: 224, name: 'معجون أسنان', icon: '🪥', unit: 'حبة' },
+                    { id: 225, name: 'فرشاة أسنان', icon: '🪥', unit: 'حبة' },
+                    { id: 226, name: 'حفاضات أطفال', icon: '👶', unit: 'باكو' },
+                    { id: 227, name: 'مناديل مبللة', icon: '🧻', unit: 'باكو' },
+                    { id: 228, name: 'مزيل عرق', icon: '🧴', unit: 'حبة' },
+                    { id: 229, name: 'كريم مرطب', icon: '🧴', unit: 'علبة' },
+                    { id: 230, name: 'فوط صحية', icon: '📦', unit: 'باكو' },
+                    { id: 231, name: 'شفرات حلاقة', icon: '🪒', unit: 'باكو' },
+                    { id: 232, name: 'قطن طبي', icon: '☁️', unit: 'باكو' },
+                ]
+            },
+            {
+                id: 'cat13', title: 'تنظيف البيت', icon: 'home', emoji: '🏠',
+                items: [
+                    { id: 250, name: 'صابون ملابس', icon: '🧺', unit: 'كيس' },
+                    { id: 251, name: 'منعم ملابس', icon: '🧴', unit: 'علبة' },
+                    { id: 252, name: 'سائل صحون', icon: '🧼', unit: 'علبة' },
+                    { id: 253, name: 'كلوركس', icon: '🧴', unit: 'علبة' },
+                    { id: 254, name: 'مناديل ورقية', icon: '🧻', unit: 'باكو' },
+                    { id: 255, name: 'أكياس زبالة', icon: '🗑️', unit: 'رول' },
+                    { id: 256, name: 'منظف أرضيات', icon: '🧹', unit: 'علبة' },
+                    { id: 257, name: 'سفنج جلي', icon: '🧽', unit: 'باكو' },
+                    { id: 258, name: 'ليفة', icon: '🧽', unit: 'حبة' },
+                    { id: 259, name: 'معطر جو', icon: '🌸', unit: 'علبة' },
+                    { id: 260, name: 'قفازات', icon: '🧤', unit: 'باكو' },
+                    { id: 261, name: 'ورق ألمنيوم', icon: '📄', unit: 'رول' },
+                    { id: 262, name: 'أكياس حفظ', icon: '📦', unit: 'باكو' },
+                ]
+            }
+        ];
+
+        // --- STATE ---
+        let cart = JSON.parse(localStorage.getItem('jeeb_cart') || '{}');
+        let family = JSON.parse(localStorage.getItem('jeeb_family') || '[]');
+        let activeView = 'shopping'; // 'shopping' or 'family'
+        let activeTab = DATA[0].id;
+        let searchQuery = '';
+
+        // --- INIT ---
+        function init() {
+            renderTabs();
+            renderItems();
+            renderFamily();
+            updateUI();
+
+            // Set Date
+            const dateOpts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('ar-LY', dateOpts);
+
+            lucide.createIcons();
+        }
+
+        // --- UI RENDERING ---
+        function renderTabs() {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = DATA.map(cat => `
+                <button 
+                    onclick="setTab('${cat.id}')" 
+                    class="category-tab px-6 py-3 rounded-2xl text-sm font-bold flex-shrink-0 flex items-center gap-2 ${activeTab === cat.id ? 'active' : 'bg-white text-gray-400 hover:bg-gray-50'}"
+                >
+                    <i data-lucide="${cat.icon}" class="w-4 h-4"></i>
+                    ${cat.title}
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderItems() {
+            const grid = document.getElementById('items-grid');
+            const empty = document.getElementById('empty-state');
+
+            let items = [];
+            if (searchQuery) {
+                // Fuzzy Search simplified
+                const q = searchQuery.toLowerCase();
+                DATA.forEach(c => {
+                    c.items.forEach(i => {
+                        if (i.name.includes(q)) items.push(i);
+                    });
+                });
+            } else {
+                items = DATA.find(c => c.id === activeTab)?.items || [];
+            }
+
+            if (items.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            grid.innerHTML = items.map(item => {
+                const count = cart[item.id] || 0;
+                return `
+                <div onclick="addToCart(${item.id})" class="item-card relative p-4 rounded-3xl cursor-pointer ${count > 0 ? 'selected' : ''}">
+                    <!-- Decoration -->
+                    <div class="absolute top-2 left-2 w-2 h-2 rounded-full ${count > 0 ? 'bg-peach-500' : 'bg-gray-100'}"></div>
+                    
+                    <div class="text-center mt-2 mb-3">
+                        <div class="text-4xl mb-2">${item.icon || '📦'}</div>
+                        <h3 class="font-bold text-lg text-sage-900">${item.name}</h3>
+                        <p class="text-xs text-gray-400">${item.unit}</p>
+                    </div>
+
+                    ${count === 0 ? `
+                        <button class="w-full bg-cream-100 text-sage-600 py-2.5 rounded-xl font-bold text-sm hover:bg-cream-200 transition-colors">
+                            جيب
+                        </button>
+                    ` : `
+                        <div class="flex items-center justify-between bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100" onclick="event.stopPropagation()">
+                            <button onclick="updateCart(${item.id}, -1)" class="w-10 h-10 flex items-center justify-center text-red-400 hover:bg-red-50 text-lg font-bold">-</button>
+                            <span class="font-black text-emerald-600">${count}</span>
+                            <button onclick="updateCart(${item.id}, 1)" class="w-10 h-10 flex items-center justify-center text-emerald-600 hover:bg-emerald-50 text-lg font-bold">+</button>
+                        </div>
+                    `}
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderFamily() {
+            const container = document.getElementById('family-list');
+            if (family.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-3xl text-center shadow-sm border border-dashed border-gray-200">
+                        <p class="text-gray-400">القائمة فاضية، ضيفي أسماء أبنائك</p>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = family.map((son, idx) => `
+                <div class="bg-white p-4 rounded-3xl shadow-sm flex justify-between items-center border border-gray-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-peach-100 text-peach-600 flex items-center justify-center font-bold text-xl">
+                            ${son.name[0]}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">${son.name}</h3>
+                            <p class="text-xs text-gray-400">${son.phone}</p>
+                        </div>
+                    </div>
+                    <button onclick="removeFamily(${idx})" class="p-2 text-gray-300 hover:text-red-400">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- ACTIONS ---
+        function addToCart(id) {
+            if (!cart[id]) updateCart(id, 1);
+        }
+
+        function updateCart(id, delta) {
+            cart[id] = (cart[id] || 0) + delta;
+            if (cart[id] <= 0) delete cart[id];
+            localStorage.setItem('jeeb_cart', JSON.stringify(cart));
+            renderItems();
+            updateUI();
+        }
+
+        function updateUI() {
+            const count = Object.keys(cart).length;
+            document.getElementById('header-count').innerText = Object.values(cart).reduce((a, b) => a + b, 0);
+
+            const bar = document.getElementById('action-bar');
+            if (count > 0 && activeView === 'shopping') {
+                bar.classList.remove('translate-y-32');
+            } else {
+                bar.classList.add('translate-y-32');
+            }
+        }
+
+        function setTab(id) {
+            activeTab = id;
+            renderTabs();
+            renderItems();
+        }
+
+        function toggleView() {
+            activeView = activeView === 'shopping' ? 'family' : 'shopping';
+
+            const btn = document.getElementById('view-icon');
+            const shoppingDiv = document.getElementById('view-shopping');
+            const familyDiv = document.getElementById('view-family');
+
+            if (activeView === 'family') {
+                btn.setAttribute('data-lucide', 'shopping-basket');
+                shoppingDiv.classList.add('hidden');
+                familyDiv.classList.remove('hidden');
+            } else {
+                btn.setAttribute('data-lucide', 'users');
+                shoppingDiv.classList.remove('hidden');
+                familyDiv.classList.add('hidden');
+            }
+
+            lucide.createIcons();
+            updateUI();
+        }
+
+        // --- FAMILY FEATURES ---
+        async function addFamilyMember() {
+            const { value: formValues } = await Swal.fire({
+                title: 'إضافة ابن جديد',
+                html: `
+                    <input id="swal-name" class="swal2-input" placeholder="الاسم (مثلاً: أحمد)">
+                    <input id="swal-phone" class="swal2-input" placeholder="رقم الهاتف (218...)">
+                `,
+                focusConfirm: false,
+                confirmButtonText: 'حفظ',
+                showCancelButton: true,
+                cancelButtonText: 'إلغاء',
+                preConfirm: () => {
+                    return [
+                        document.getElementById('swal-name').value,
+                        document.getElementById('swal-phone').value
+                    ]
+                }
+            });
+
+            if (formValues && formValues[0] && formValues[1]) {
+                family.push({ name: formValues[0], phone: formValues[1] });
+                localStorage.setItem('jeeb_family', JSON.stringify(family));
+                renderFamily();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تمت الإضافة!',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }
+        }
+
+        function removeFamily(idx) {
+            Swal.fire({
+                title: 'متأكدة تبي تحذفي؟',
+                text: "لن تظهر بياناته مرة أخرى",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، احذفي',
+                cancelButtonText: 'لا'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    family.splice(idx, 1);
+                    localStorage.setItem('jeeb_family', JSON.stringify(family));
+                    renderFamily();
+                }
+            });
+        }
+
+        // --- OUTPUT GENERATION ---
+        function generateMessage() {
+            let msg = `🛒 *قائمة مطبخنا اليوم*:\n\n`;
+
+            // Group by category Logic
+            let grouped = {};
+            for (let [id, qty] of Object.entries(cart)) {
+                let item, cat;
+                DATA.forEach(c => {
+                    let found = c.items.find(i => i.id == id);
+                    if (found) { item = found; cat = c; }
+                });
+
+                if (item) {
+                    if (!grouped[cat.title]) grouped[cat.title] = [];
+                    grouped[cat.title].push(`${item.name} (${qty} ${item.unit})`);
+                }
+            }
+
+            for (let [catTitle, items] of Object.entries(grouped)) {
+                msg += `🔸 *${catTitle}*\n`;
+                items.forEach(i => msg += `   - ${i}\n`);
+                msg += '\n';
+            }
+
+            msg += `\nالله يرضى عليك يا ولدي ❤️`;
+            return msg;
+        }
+
+        async function handleSend() {
+            const msg = generateMessage();
+
+            if (family.length > 0) {
+                const inputOptions = {};
+                family.forEach((son, idx) => {
+                    inputOptions[idx] = son.name;
+                });
+                inputOptions['other'] = 'رقم آخر / مشاركة عامة';
+
+                const { value: selectedIdx } = await Swal.fire({
+                    title: 'لمن تبي تبعثي القائمة؟',
+                    input: 'radio',
+                    inputOptions: inputOptions,
+                    inputValue: '0',
+                    confirmButtonText: 'إرسال',
+                    showCancelButton: true,
+                    cancelButtonText: 'إلغاء'
+                });
+
+                if (selectedIdx === undefined) return;
+
+                if (selectedIdx === 'other') {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+                } else {
+                    const son = family[selectedIdx];
+                    let phone = son.phone.replace(/\D/g, '');
+                    if (phone.startsWith('09')) phone = '218' + phone.substring(1);
+                    if (phone.startsWith('9')) phone = '218' + phone;
+
+                    const sonMsg = `يا ${son.name}، \n` + msg;
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(sonMsg)}`);
+                }
+
+            } else {
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+            }
+        }
+
+        function copyList() {
+            const msg = generateMessage();
+            navigator.clipboard.writeText(msg).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم نسخ القائمة',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            });
+        }
+
+        function confirmClear() {
+            Swal.fire({
+                title: 'تصفير القائمة؟',
+                text: "هل أنت متأكدة من مسح كل الأغراض؟",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff8b64',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'نعم، امسحي',
+                cancelButtonText: 'تراجع'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    cart = {};
+                    localStorage.setItem('jeeb_cart', JSON.stringify({}));
+                    renderItems();
+                    updateUI();
+                    Swal.fire({
+                        title: 'تم المسح!',
+                        icon: 'success',
+                        toast: true,
+                        position: 'top',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            })
+        }
+
+        // Search Listener
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            searchQuery = e.target.value.trim();
+            renderItems();
+        });
+
+        // Start
+        window.onload = init;
+    </script>
+</body>
+
+</html>
