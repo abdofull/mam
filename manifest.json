@@ -1,0 +1,20 @@
+{
+  "short_name": "تطبيق جيب",
+  "name": "تطبيق جيب - إدارة المصاريف الشخصية",
+  "icons": [
+    {
+      "src": "images (1).jfif",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "images (1).jfif",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#fdfbf7",
+  "background_color": "#fdfbf7"
+}
